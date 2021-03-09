@@ -137,7 +137,7 @@ class ParameterInterface(object):
             return 'String'
         elif itype == 'list' or itype == 'dict':
             if ":" in str(value):
-                return 'Struc'
+                return 'Struct'
             else:
                 return 'List'
         else:
@@ -152,8 +152,8 @@ class ParameterInterface(object):
         elif self.itype == "List":
             str_param_value += str(self.value).replace(
                 "[", "{").replace("]", "}")
-        elif self.itype == 'Struc':
-            str_param_value += self.value_struc(self.value[0], indent+"  ")
+        elif self.itype == 'Struct':
+            str_param_value += self.value_struct(self.value[0], indent+"  ")
         else:
             str_param_value += str(value)
         return str_param_value
@@ -170,39 +170,39 @@ class ParameterInterface(object):
     def java_format(self, indent="", value=""):
         str_param = "%sParameter { name '%s' type %s " % (
             indent, self.resolved, self.itype)
-        if self.itype == 'Struc':
-            str_param += self.types_struc(self.value[0], indent)
+        if self.itype == 'Struct':
+            str_param += self.types_struct(self.value[0], indent)
             #str_param = str_param[:-2]
         if self.itype == 'List':
             str_param += self.form_list(self.value)
         str_param += "}"
         return str_param
 
-    def types_struc(self, struc_dict, indent):
+    def types_struct(self, struct_dict, indent):
         str_param = "{\n"
         indent_new = indent+"  "
-        for struc_element in struc_dict:
-            sub_name = struc_element
-            sub_value = struc_dict[struc_element]
+        for struct_element in struct_dict:
+            sub_name = struct_element
+            sub_value = struct_dict[struct_element]
             sub_type = self.get_type(sub_value)
             str_param += "%s'%s' %s" % (indent_new, sub_name, sub_type)
             if sub_type == 'List':
                 str_param += self.form_list(sub_value)
             if isinstance(sub_value, dict):
-                str_param += self.types_struc(
-                    struc_dict[struc_element], indent_new)
+                str_param += self.types_struct(
+                    struct_dict[struct_element], indent_new)
             str_param += ",\n"
         str_param = str_param[:-2]
         str_param += "}"
         indent_new = ""
         return str_param
 
-    def value_struc(self, struc_dict, indent):
+    def value_struct(self, struct_dict, indent):
         str_param = "{\n"
         indent_new = indent+"    "
-        for struc_element in struc_dict:
-            sub_name = struc_element
-            sub_value = struc_dict[struc_element]
+        for struct_element in struct_dict:
+            sub_name = struct_element
+            sub_value = struct_dict[struct_element]
             sub_type = self.get_type(sub_value)
             str_param += "%s{ '%s' { value " % (indent_new, sub_name)
             if sub_type == "String":
@@ -213,8 +213,8 @@ class ParameterInterface(object):
             if sub_type == "Boolean":
                 sub_value = str(sub_value).lower()
             if isinstance(sub_value, dict):
-                str_param += self.value_struc(
-                    struc_dict[struc_element], indent_new)
+                str_param += self.value_struct(
+                    struct_dict[struct_element], indent_new)
                 self.count = self.count + 1
             else:
                 str_param += "%s}}" % (sub_value)
@@ -365,21 +365,21 @@ class Node(object):
 
     def dump_java_ros_model(self):
         ros_model_str = "    Artifact "+self.name+" {\n"
-        ros_model_str += "      node Node { name " + self.name+"\n"
+        ros_model_str += "      Node { name " + self.name
         ros_model_str += self.service_servers.java_format_ros_model(
-            "        ", "ServiceServer", "service", "serviceserver")
+            "        ", "ServiceServer", "service", "ServiceServers")
         ros_model_str += self.service_clients.java_format_ros_model(
-            "        ", "ServiceClients", "service", "serviceclient")
+            "        ", "ServiceClients", "service", "ServiceClients")
         ros_model_str += self.publishers.java_format_ros_model(
-            "        ", "Publisher", "message", "publisher")
+            "        ", "Publisher", "message", "Publishers")
         ros_model_str += self.subscribers.java_format_ros_model(
-            "        ", "Subscriber", "message", "subscriber")
+            "        ", "Subscriber", "message", "Subscribers")
         ros_model_str += self.action_servers.java_format_ros_model(
-            "        ", "ActionServer", "action", "actionserver")
+            "        ", "ActionServer", "action", "ActionServers")
         ros_model_str += self.action_clients.java_format_ros_model(
-            "        ", "ActionClient", "action", "actionclient")
+            "        ", "ActionClient", "action", "ActionClients")
         ros_model_str += self.params.java_format_ros_model(
-            "        ", "Parameters", "parameter")
+            "        ", "Parameters", "Parameters")
         ros_model_str += "}},\n"
         return ros_model_str
 
