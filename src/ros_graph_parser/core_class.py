@@ -32,15 +32,6 @@ class Interface(object):
         return {"Type": self.itype, "Name": self.resolved,
                 "Namespace": self.namespace, "Minimal": self.minimal}
 
-    def str_format(self, indent=""):
-        return ("%sType: %s\n%sName: %s\n%sNamespace: %s\n%sMinimal: %s\n") % (
-            indent, self.itype, indent, self.resolved, indent,
-            self.namespace, indent, self.minimal)
-
-    def java_format(self, indent="", name_type="", interface_type=""):
-        return ("%s%s { name '%s' %s '%s'}") % (
-            indent, name_type, self.resolved, interface_type, self.itype.replace("/", "."))
-
 
 class InterfaceSet(set):
 
@@ -64,36 +55,6 @@ class InterfaceSet(set):
 
     def remove_with_name(self, name):
         self.remove(self.get_with_name(name))
-
-    def str_format(self, indent=""):
-        str_ = ""
-        for elem in self:
-            str_ += elem.str_format(indent) + "\n"
-        return str_
-
-    def java_format_ros_model(self, indent="", name_type="", interface_type="", name_block=""):
-        if len(self) == 0:
-            return ""
-        str_ = ("\n%s%s {\n") % (indent, name_block)
-        for elem in self:
-            str_ += elem.java_format(indent+"  ",
-                                     name_type, interface_type) + ",\n"
-        str_ = str_[:-2]
-        str_ += "}"
-        return str_
-
-    def java_format_system_model(self, indent="", name_type="", name_type2="", node_name="", pkg_name="", name_type3=""):
-        if len(self) == 0:
-            return ""
-        if not name_type3:
-            name_type3 = name_type2
-        str_ = ("%sRos%s {\n") % (indent, name_type)
-        for elem in self:
-            str_ += ("%s    Ros%s '%s' {Ref%s '%s.%s.%s.%s'},\n") % (
-                indent, name_type3, elem.resolved, name_type2, pkg_name, node_name, node_name, elem.resolved)
-        str_ = str_[:-2]
-        str_ += "}\n"
-        return str_
 
     def get_list(self):
         return [x.get_dict() for x in self]
@@ -167,17 +128,6 @@ class ParameterInterface(object):
             indent, self.value, indent, self.resolved, indent,
             self.namespace, indent, self.minimal)
 
-    def java_format(self, indent="", value=""):
-        str_param = "%sParameter { name '%s' type %s " % (
-            indent, self.resolved, self.itype)
-        if self.itype == 'Struct':
-            str_param += self.types_struct(self.value[0], indent)
-            #str_param = str_param[:-2]
-        if self.itype == 'List':
-            str_param += self.form_list(self.value)
-        str_param += "}"
-        return str_param
-
     def types_struct(self, struct_dict, indent):
         str_param = "{\n"
         indent_new = indent+"  "
@@ -240,35 +190,6 @@ class ParameterInterface(object):
 
 
 class ParameterSet(set):
-
-    def str_format(self, indent=""):
-        str_ = ""
-        for elem in self:
-            str_ += elem.str_format(indent) + "\n"
-        return str_
-
-    def java_format_ros_model(self, indent="", value="", name_block=""):
-        if len(self) == 0:
-            return ""
-        str_ = ("\n%s%s {\n") % (indent, name_block)
-        for elem in self:
-            str_ += elem.java_format(indent+"  ", value) + ",\n"
-        str_ = str_[:-2]
-        str_ += "}"
-        return str_
-
-    def java_format_system_model(self, indent="", name_type="", name_type2="", node_name="", pkg_name="", name_type3=""):
-        if len(self) == 0:
-            return ""
-        if not name_type3:
-            name_type3 = name_type2
-        str_ = ("%sRos%s {\n") % (indent, name_type)
-        for elem in self:
-            str_ += ("%s    Ros%s '%s' {Ref%s '%s.%s.%s.%s' value %s},\n") % (
-                indent, name_type3, elem.resolved, name_type2, pkg_name, node_name, node_name, elem.resolved, elem.set_value(elem.value, indent))
-        str_ = str_[:-2]
-        str_ += "}\n"
-        return str_
 
     def get_list(self):
         return [x.get_dict() for x in self]
@@ -337,22 +258,6 @@ class Node(object):
                 self.action_servers.add(Interface(_action_name, _action_type))
         self._clean_action_server()
 
-    def dump_print(self):
-        _str = ""
-        _str = "Node: \n\t%s" % (self.name)
-        _str = _str + \
-            "\tPublishers:\n%s" % (self.publishers.str_format('\t\t'))
-        _str = _str + \
-            "\tSubscribers:\n%s" % (self.subscribers.str_format('\t\t'))
-        _str = _str + "\tServices:\n%s" % (self.service_servers.str_format('\t\t'))
-        _str = _str + \
-            "\tActionClients:\n%s" % (self.action_clients.str_format('\t\t'))
-        _str = _str + \
-            "\tActionServers:\n%s" % (self.action_servers.str_format('\t\t'))
-        _str = _str + "\tParameters:\n%s" % (self.params.str_format('\t\t'))
-        _str = _str + ("\n")
-        print(_str)
-
     def dump_yaml(self):
         yaml_dict = dict()
         yaml_dict['Publishers'] = self.publishers.get_list()
@@ -362,41 +267,3 @@ class Node(object):
         yaml_dict['ActionServers'] = self.action_servers.get_list()
         yaml_dict['Parameters'] = self.params.get_list()
         return yaml_dict
-
-    def dump_java_ros_model(self):
-        ros_model_str = "    Artifact "+self.name+" {\n"
-        ros_model_str += "      Node { name " + self.name
-        ros_model_str += self.service_servers.java_format_ros_model(
-            "        ", "ServiceServer", "service", "ServiceServers")
-        ros_model_str += self.service_clients.java_format_ros_model(
-            "        ", "ServiceClients", "service", "ServiceClients")
-        ros_model_str += self.publishers.java_format_ros_model(
-            "        ", "Publisher", "message", "Publishers")
-        ros_model_str += self.subscribers.java_format_ros_model(
-            "        ", "Subscriber", "message", "Subscribers")
-        ros_model_str += self.action_servers.java_format_ros_model(
-            "        ", "ActionServer", "action", "ActionServers")
-        ros_model_str += self.action_clients.java_format_ros_model(
-            "        ", "ActionClient", "action", "ActionClients")
-        ros_model_str += self.params.java_format_ros_model(
-            "        ", "Parameters", "Parameters")
-        ros_model_str += "}},\n"
-        return ros_model_str
-
-    def dump_java_system_model(self, package=""):
-        system_model_str = "        ComponentInterface { name '" + \
-            self.name+"'\n"
-        system_model_str += self.publishers.java_format_system_model(
-            "            ", "Publishers", "Publisher", self.name, package)
-        system_model_str += self.subscribers.java_format_system_model(
-            "            ", "Subscribers", "Subscriber", self.name, package)
-        system_model_str += self.service_servers.java_format_system_model(
-            "            ", "SrvServers", "Server", self.name, package, "ServiceServer")
-        system_model_str += self.action_servers.java_format_system_model(
-            "            ", "ActionServers", "ActionServer", self.name, package)
-        system_model_str += self.action_clients.java_format_system_model(
-            "            ", "ActionClients", "ActionClient", self.name, package)
-        system_model_str += self.params.java_format_system_model(
-            "            ", "Parameters", "Parameter", self.name, package)
-        system_model_str += "},\n"
-        return system_model_str
